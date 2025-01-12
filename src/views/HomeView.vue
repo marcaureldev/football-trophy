@@ -14,7 +14,7 @@ const goalKeeperPosition: Ref<{ x: number; speed: number; move: number }> = ref(
 const ballPosition: Ref<{ x: number; y: number; speed: number }> = ref({
   x: 0,
   y: 0,
-  speed: 5,
+  speed: 3,
 })
 
 /* Define keys object to manage which key is selected */
@@ -27,12 +27,12 @@ const keys: {
 }
 
 /* Function for starting game */
-const startGame = () => {
+function startGame() {
   const ball: Element | null = document.querySelector('.ball')
   const goalkeeper: Element | null = document.querySelector('.goalkeeper')
 
-  if (ball && goalkeeper) { /* To ensure that ball and goalkeeper are well initialized */
-
+  /* To ensure that ball and goalkeeper are well initialized */
+  if (ball && goalkeeper) {
     /* Remove hidden style to the ball and goalKeeper element */
     ball.classList.remove('hidden')
     goalkeeper.classList.remove('hidden')
@@ -45,13 +45,17 @@ const startGame = () => {
 
     /*Set goalKeeper at middle of the game area */
     goalKeeperPosition.value.x = WIDTH * 0.5
+
+    playGame()
+    moveGoalKeeper()
   }
 }
 
-const moveGoalKeeper = () => {
+function moveGoalKeeper() {
   document.addEventListener('keydown', pressOn)
   document.addEventListener('keyup', pressOff)
 
+  /* Function to start moving when a key is down */
   function pressOn(e: Event) {
     e.preventDefault()
     keys[e.key] = true
@@ -64,12 +68,24 @@ const moveGoalKeeper = () => {
     }
   }
 
+  /* Function called when key is up */
   function pressOff(e: Event) {
     e.preventDefault()
     keys[e.key] = false
   }
 }
-moveGoalKeeper()
+
+/* Function to start playing game */
+let animationFrame: number;
+
+function playGame() {
+  ballPosition.value.y += ballPosition.value.speed
+  animationFrame = window.requestAnimationFrame(playGame)
+}
+
+function pauseGame() {
+  cancelAnimationFrame(animationFrame)
+}
 </script>
 
 <template>
@@ -82,9 +98,14 @@ moveGoalKeeper()
 
         <!-- Ball -->
         <div
-          class="ball absolute hidden"
-          :style="{ left: `${ballPosition.x}px`, top: '25px', transform: 'translate(-50%, -50%)' }"
+          class="ball absolute hidden text-white"
+          :style="{
+            left: `${ballPosition.x}px`,
+            top: '-150px',
+            transform: `translate(-50%, ${ballPosition.y}px)`,
+          }"
         >
+          {{ ballPosition.y }}
           <img src="/images/ball.svg" alt="" class="w-8 h-8" />
         </div>
 
@@ -112,13 +133,14 @@ moveGoalKeeper()
         Jouer
       </button>
 
-      <button
+      <button @click="pauseGame"
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
       >
         Pause
       </button>
 
       <button
+        @click="playGame"
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
       >
         Play
