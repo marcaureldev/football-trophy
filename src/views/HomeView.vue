@@ -1,47 +1,125 @@
+<script setup lang="ts">
+import { ref, type Ref } from 'vue'
+const WIDTH = 400
+const columnWidth = WIDTH / 3
+
+/* Initial position of goalKeeper */
+const goalKeeperPosition: Ref<{ x: number; speed: number; move: number }> = ref({
+  x: 0,
+  speed: 5,
+  move: columnWidth / 2,
+})
+
+/* Initial position of ball */
+const ballPosition: Ref<{ x: number; y: number; speed: number }> = ref({
+  x: 0,
+  y: 0,
+  speed: 5,
+})
+
+/* Define keys object to manage which key is selected */
+const keys: {
+  ArrowRight: boolean
+  ArrowLeft: boolean
+} = {
+  ArrowRight: false,
+  ArrowLeft: false,
+}
+
+/* Function for starting game */
+const startGame = () => {
+  const ball: Element | null = document.querySelector('.ball')
+  const goalkeeper: Element | null = document.querySelector('.goalkeeper')
+
+  if (ball && goalkeeper) { /* To ensure that ball and goalkeeper are well initialized */
+
+    /* Remove hidden style to the ball and goalKeeper element */
+    ball.classList.remove('hidden')
+    goalkeeper.classList.remove('hidden')
+
+    /* Choose random column between 0, 1 et 3 */
+    const randomColumn = Math.floor(Math.random() * 3)
+
+    /* Set ball position at middle of selected column */
+    ballPosition.value.x = randomColumn * columnWidth + columnWidth / 2
+
+    /*Set goalKeeper at middle of the game area */
+    goalKeeperPosition.value.x = WIDTH * 0.5
+  }
+}
+
+const moveGoalKeeper = () => {
+  document.addEventListener('keydown', pressOn)
+  document.addEventListener('keyup', pressOff)
+
+  function pressOn(e: Event) {
+    e.preventDefault()
+    keys[e.key] = true
+    if (keys.ArrowRight && goalKeeperPosition.value.x < 2 * columnWidth) {
+      goalKeeperPosition.value.x += columnWidth
+    }
+
+    if (keys.ArrowLeft && goalKeeperPosition.value.x > columnWidth) {
+      goalKeeperPosition.value.x -= columnWidth
+    }
+  }
+
+  function pressOff(e: Event) {
+    e.preventDefault()
+    keys[e.key] = false
+  }
+}
+moveGoalKeeper()
+</script>
+
 <template>
   <div class="min-h-screen bg-green-950/95 flex">
     <div class="flex-1 p-8 flex items-center justify-center">
-      <div class="h-[500px] w-[400px] flex gap-1 rounded-lg relative">
-        <div class="bg-green-950/95 w-full flex justify-center items-end"></div>
-        <div class="bg-green-950/95 w-full flex justify-center items-end">
-          <!-- Ball -->
-          <div
-            ref="ballRef"
-            class="absolute top-0"
-            :style="{ transform: `translate(${ballPosition.x}px, ${ballPosition.y}px)` }"
-          >
-            <img src="/images/ball.svg " alt="" />
-          </div>
-          <!-- Goalkeeper -->
-          <div ref="goalkeeperRef" class="flex justify-center" :style="{ transform: `translateX(${goalkeeper.x}px)` }">
-            <img src="/images/goal-keeper.svg" alt="" class="w-12 h-12" />
-          </div>
+      <div class="h-[500px] w-[400px] flex gap-1 rounded-lg relative overflow-hidden">
+        <div class="bg-green-950/95 w-1/3 flex justify-center items-end"></div>
+        <div class="bg-green-950/95 w-1/3 flex justify-center items-end"></div>
+        <div class="bg-green-950/95 w-1/3 flex justify-center items-end"></div>
+
+        <!-- Ball -->
+        <div
+          class="ball absolute hidden"
+          :style="{ left: `${ballPosition.x}px`, top: '25px', transform: 'translate(-50%, -50%)' }"
+        >
+          <img src="/images/ball.svg" alt="" class="w-8 h-8" />
         </div>
-        <div class="bg-green-950/95 w-full flex justify-center items-end"></div>
+
+        <!-- Goalkeeper -->
+        <div
+          class="goalkeeper hidden absolute"
+          :style="{
+            left: `${goalKeeperPosition.x}px`,
+            bottom: 0,
+            transform: 'translate(-50%, -50%)',
+          }"
+        >
+          <img src="/images/goal-keeper.svg" alt="" class="w-12 h-12" />
+        </div>
       </div>
     </div>
 
     <div class="w-64 bg-teal-900/80 p-4 flex flex-col gap-4">
-      <div class="text-white text-xl mb-4">Score : {{ score }}</div>
+      <div class="text-white text-xl mb-4">Score:</div>
 
       <button
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
         @click="startGame"
-        :disabled="gameStarted"
       >
         Jouer
       </button>
 
       <button
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
-        @click="pauseGame"
       >
         Pause
       </button>
 
       <button
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
-        @click="resumeGame"
       >
         Play
       </button>
@@ -49,14 +127,13 @@
       <button
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
       >
-        Meilleur Score: {{ bestScore }}
+        Meilleur Score
       </button>
 
       <button
         class="w-full bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
-        @click="toggleSound"
       >
-        {{ soundEnabled ? 'Désactiver' : 'Activer' }} le son
+        Désactiver / Activer le son
       </button>
 
       <button
@@ -67,143 +144,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-
-// Game state
-const gameStarted = ref(false)
-const gamePaused = ref(false)
-const score = ref(0)
-const bestScore = ref(0)
-const soundEnabled = ref(true)
-
-// Elements refs
-const ballRef = ref<HTMLElement | null>(null)
-const goalkeeperRef = ref<HTMLElement | null>(null)
-
-
-const ballPosition = ref({ x: 4, y: -50 })
-const ballSpeed = ref({ x: 0, y: 2 })
-
-
-const goalkeeper = ref({
-  x: 0,
-  speed: 15,
-  column: 1, 
-})
-
-// Game loop
-let animationFrame: number
-
-function startGame() {
-  if (gameStarted.value) return
-
-  gameStarted.value = true
-  gamePaused.value = false
-  score.value = 0
-  resetBall()
-  gameLoop()
-}
-
-function pauseGame() {
-  gamePaused.value = true
-  cancelAnimationFrame(animationFrame)
-}
-
-function resumeGame() {
-  if (!gameStarted.value) return
-  gamePaused.value = false
-  gameLoop()
-}
-
-function resetBall() {
-  // Random x position at the top
-  ballPosition.value = {
-    x: Math.random() * 400 + 50,
-    y: 0,
-  }
-}
-
-function checkCollision(): boolean {
-  if (!ballRef.value || !goalkeeperRef.value) return false
-
-  const ballRect = ballRef.value.getBoundingClientRect()
-  const goalkeeperRect = goalkeeperRef.value.getBoundingClientRect()
-
-  return !(
-    ballRect.bottom < goalkeeperRect.top ||
-    ballRect.top > goalkeeperRect.bottom ||
-    ballRect.right < goalkeeperRect.left ||
-    ballRect.left > goalkeeperRect.right
-  )
-}
-
-function gameLoop() {
-  if (gamePaused.value) return
-
-  // Move ball
-  ballPosition.value.y += ballSpeed.value.y
-
-  // Check collision
-  if (checkCollision()) {
-    score.value++
-    if (score.value > bestScore.value) {
-      bestScore.value = score.value
-    }
-    resetBall()
-  }
-
-  // Check if ball passed goalkeeper
-  if (ballPosition.value.y > 500) {
-    gameOver()
-    return
-  }
-
-  animationFrame = requestAnimationFrame(gameLoop)
-}
-
-function gameOver() {
-  gameStarted.value = false
-  alert(`Game Over! Score: ${score.value}`)
-}
-
-function moveGoalkeeper(direction: 'left' | 'right') {
-  const columnWidth = 166 // Approximate width of each column
-
-  if (direction === 'left' && goalkeeper.value.column > 0) {
-    goalkeeper.value.column--
-    goalkeeper.value.x -= columnWidth
-  } else if (direction === 'right' && goalkeeper.value.column < 2) {
-    goalkeeper.value.column++
-    goalkeeper.value.x += columnWidth
-  }
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  if (!gameStarted.value || gamePaused.value) return
-
-  switch (event.key) {
-    case 'ArrowLeft':
-      moveGoalkeeper('left')
-      break
-    case 'ArrowRight':
-      moveGoalkeeper('right')
-      break
-  }
-}
-
-function toggleSound() {
-  soundEnabled.value = !soundEnabled.value
-}
-
-// Event listeners
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-  cancelAnimationFrame(animationFrame)
-})
-</script>
